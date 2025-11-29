@@ -1,0 +1,300 @@
+
+<#
+Unified AI Video Pipeline - Ready-to-run PowerShell script
+Defaults are set to your local paths:
+  - RIFE binary: C:\Users\omnic\Documents\vidproj\rife-ncnn-vulkan-20221029-windows\rife-ncnn-vulkan.exe
+  - Work folder:  C:\Users\omnic\Documents\vidproj\free_video_work
+
+Save as: unified_ai_pipeline.ps1
+Run:
+  powershell -ExecutionPolicy Bypass -File .\unified_ai_pipeline.ps1
+
+This script:
+ - Processes all .mov/.mp4 files in the input folder
+ - Extracts audio and performs loudness normalization
+ - Extracts frames (PNG)
+ - Optionally runs ComfyUI batch stylization (if installed)
+ - Interpolates frames using local RIFE (preferred) or skips if missing
+ - Encodes frames back to video, applies color correction & stabilization
+ - Extracts scene keyframes
+ - Re-attaches audio, trims to shortest stream
+ - Stitches all final per-clip outputs into a single final movie
+ - Writes verbose logs and leaves intermediate artifacts in a work folder
+
+Notes:
+ - Requires ffmpeg on PATH.
+ - RIFE must be the NCNN Vulkan build (rife-ncnn-vulkan.exe).
+ - ComfyUI and FILM are optional and must be installed under C:\AItools\ if used.
+ - This script is defensive: it checks for files and reports errors without crashing.
+#>
+
+param(
+    [string]$Folder = "C:\Users\omnic\Documents\vidproj\free_video_work",
+    [string]$Output = "grok_final.mp4",
+    [int]$Fps = 24,
+    [string]$RifePath = "C:\Users\omnic\Documents\vidproj\rife-ncnn-vulkan-20221029-windows\rife-ncnn-vulkan.exe",
+    [bool]$UseComfyUI = $false,
+    [bool]$UseInterpolation = $true,
+    [int]$InterpFactor = 4,
+    [bool]$UseColorStab = $true,
+    [bool]$UseKeyframes = $true,
+    [switch]$DryRun
+)
+
+Set-StrictMode -Version Latest
+$ErrorActionPreference = "Stop"
+
+function Write-Log {
+    param([string]$msg)
+    $ts = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
+    Write-Host "[$ts] $msg"
+}
+
+Write-Log "Starting Unified AI Video Pipeline"
+Write-Log ("Input Folder: {0}" -f $Folder)
+Write-Log ("Output Name : {0}" -f $Output)
+Write-Log ("FPS         : {0}" -f $Fps)
+Write-Log ("RIFE exe    : {0}" -f $RifePath)
+Write-Log ("Interp      : {0} (x{1})" -f $UseInterpolation, $InterpFactor)
+Write-Log ("ComfyUI     : {0}" -f $UseComfyUI)
+Write-Log ("Color/Stab  : {0}" -f $UseColorStab)
+Write-Log ("Keyframes   : {0}" -f $UseKeyframes)
+if ($DryRun) { Write-Log "DRY RUN: No heavy commands will be executed." }
+
+# Basic preflight
+function Ensure-Tool {
+    param($tool, $hint)
+    if (-not (Get-Command $tool -ErrorAction SilentlyContinue)) {
+        Write-Log "ERROR: $tool not found on PATH. $hint"
+        return $false
+    }
+    return $true
+}
+
+# Ensure ffmpeg
+if (-not (Ensure-Tool -tool "ffmpeg" -hint "Install via: winget install --id Gyan.FFmpeg --source winget")) {
+    Write-Error "ffmpeg is required. Aborting."
+    exit 1
+}
+
+if (-not (Test-Path $Folder)) {
+    Write-Error "Input folder not found: $Folder"
+    exit 1
+}
+
+# locate python if needed
+function Find-PythonExe {
+    $candidates = @(
+        Join-Path $Env:LOCALAPPDATA "Programs\Python",
+        "C:\Program Files",
+        "C:\Program Files (x86)"
+    )
+    foreach ($base in $candidates) {
+        if (Test-Path $base) {
+            $pyDirs = Get-ChildItem $base -Directory -ErrorAction SilentlyContinue | Where-Object { $_.Name -like "Python*" -or $_.Name -like "python*" }
+            foreach ($d in $pyDirs) {
+                $p = Join-Path $d.FullName "python.exe"
+                if (Test-Path $p) { return $p }
+            }
+        }
+    }
+    $cmd = Get-Command python -ErrorAction SilentlyContinue
+    if ($cmd -and $cmd.Source -and ($cmd.Source -notlike "*WindowsApps*")) { return $cmd.Source }
+    return $null
+}
+
+$pythonExe = Find-PythonExe
+if ($UseComfyUI -and -not $pythonExe) {
+    Write-Log "WARNING: ComfyUI requested but python.exe not found. ComfyUI step will be skipped."
+    $UseComfyUI = $false
+}
+
+# Prepare work directories
+$workDir = Join-Path $Folder "unified_ai_work"
+if (-not (Test-Path $workDir)) { New-Item -ItemType Directory -Path $workDir | Out-Null }
+$logFile = Join-Path $workDir "pipeline.log"
+
+# helper to run a command, capture output
+function Run-Command {
+    param([string]$cmd, [switch]$AllowFail)
+    Write-Log "CMD: $cmd"
+    if ($DryRun) { Write-Log "Dry-run: skipped execution"; return @{ ExitCode = 0; StdOut = ""; StdErr = "" } }
+    try {
+        $proc = Start-Process -FilePath "powershell" -ArgumentList "-NoProfile -Command & { $cmd }" -NoNewWindow -PassThru -Wait -RedirectStandardOutput (Join-Path $workDir "last_stdout.txt") -RedirectStandardError (Join-Path $workDir "last_stderr.txt")
+        $out = Get-Content (Join-Path $workDir "last_stdout.txt") -Raw -ErrorAction SilentlyContinue
+        $err = Get-Content (Join-Path $workDir "last_stderr.txt") -Raw -ErrorAction SilentlyContinue
+        return @{ ExitCode = $proc.ExitCode; StdOut = $out; StdErr = $err }
+    } catch {
+        Write-Log "Command execution failed: $_"
+        if ($AllowFail) { return @{ ExitCode = 1; StdOut = ""; StdErr = "$_" } }
+        throw
+    }
+}
+
+# Find input videos
+$videos = Get-ChildItem -Path $Folder -File | Where-Object { $_.Extension -in ".mov", ".mp4" } | Sort-Object Name
+if ($videos.Count -eq 0) {
+    Write-Log "No .mov or .mp4 files found in $Folder. Nothing to do."
+    exit 0
+}
+Write-Log ("Found {0} video(s)." -f $videos.Count)
+
+# We'll collect final clip paths
+$finalClips = @()
+
+$idx = 0
+foreach ($vid in $videos) {
+    $idx++; $pct = [int](($idx/$videos.Count)*100)
+    Write-Progress -Activity "Processing videos" -Status "$($vid.Name)" -PercentComplete $pct
+    Write-Log "=== Processing: $($vid.Name) ==="
+
+    $base = [System.IO.Path]::GetFileNameWithoutExtension($vid.Name)
+    $clipDir = Join-Path $workDir $base
+    if (Test-Path $clipDir) { Remove-Item $clipDir -Recurse -Force -ErrorAction SilentlyContinue }
+    New-Item -ItemType Directory -Path $clipDir | Out-Null
+
+    # paths
+    $framesRaw = Join-Path $clipDir "frames_raw"
+    $framesStyl = Join-Path $clipDir "frames_stylized"
+    $framesInterp = Join-Path $clipDir "frames_interp"
+    $audioRaw = Join-Path $clipDir "audio_raw.wav"
+    $audioClean = Join-Path $clipDir "audio_clean.wav"
+    $videoFromFrames = Join-Path $clipDir "video_from_frames.mp4"
+    $videoColorStab = Join-Path $clipDir "video_color_stab.mp4"
+    $videoFinal = Join-Path $clipDir "final_with_audio.mp4"
+    $keyframesDir = Join-Path $clipDir "keyframes"
+
+    # 1) Extract audio
+    Write-Log "Audio extract: $audioRaw"
+    $cmd = "ffmpeg -y -i `"$($vid.FullName)`" -vn -acodec pcm_s16le -ar 48000 -ac 2 `"$audioRaw`""
+    Run-Command -cmd $cmd
+
+    # 2) Clean + loudness normalize
+    Write-Log "Audio clean: $audioClean"
+    $af = "highpass=f=80,lowpass=f=12000,afftdn,loudnorm=I=-16:TP=-1.5:LRA=11"
+    $cmd = "ffmpeg -y -i `"$audioRaw`" -af `"$af`" `"$audioClean`""
+    Run-Command -cmd $cmd
+
+    # 3) Extract frames
+    Write-Log "Extracting frames to $framesRaw"
+    if (Test-Path $framesRaw) { Remove-Item $framesRaw -Recurse -Force -ErrorAction SilentlyContinue }
+    New-Item -ItemType Directory -Path $framesRaw | Out-Null
+    $pattern = Join-Path $framesRaw "frame_%06d.png"
+    $cmd = "ffmpeg -y -i `"$($vid.FullName)`" -vf fps=$Fps `"$pattern`""
+    Run-Command -cmd $cmd
+
+    # 4) ComfyUI stylize (optional)
+    $framesForInterp = $framesRaw
+    if ($UseComfyUI -and $pythonExe) {
+        Write-Log "ComfyUI stylization requested"
+        $comfyBatch = "C:\AItools\comfyui\batch_frames.py"
+        if (Test-Path $comfyBatch) {
+            New-Item -ItemType Directory -Path $framesStyl | Out-Null
+            $cmd = "`"$pythonExe`" `"$comfyBatch`" --input `"$framesRaw`" --output `"$framesStyl`""
+            Run-Command -cmd $cmd
+            # if stylized frames exist, use them
+            $got = Get-ChildItem -Path $framesStyl -Filter "frame_*.png" -ErrorAction SilentlyContinue
+            if ($got.Count -gt 0) { $framesForInterp = $framesStyl; Write-Log "ComfyUI produced frames; using stylized frames." } else { Write-Log "ComfyUI produced no frames; continuing with raw frames." }
+        } else {
+            Write-Log "ComfyUI batch script not found at $comfyBatch; skipping ComfyUI."
+        }
+    }
+
+    # 5) Interpolate with RIFE (preferred)
+    $framesForEncode = $framesForInterp
+    if ($UseInterpolation) {
+        if (Test-Path $RifePath) {
+            Write-Log "Running RIFE interpolation (factor x$InterpFactor)"
+            if (Test-Path $framesInterp) { Remove-Item $framesInterp -Recurse -Force -ErrorAction SilentlyContinue }
+            New-Item -ItemType Directory -Path $framesInterp | Out-Null
+            $cmd = "`"$RifePath`" -i `"$framesForInterp`" -o `"$framesInterp`" -f $InterpFactor"
+            $res = Run-Command -cmd $cmd -AllowFail
+            if ($res.ExitCode -eq 0) {
+                $outCount = (Get-ChildItem -Path $framesInterp -Filter "frame_*.png" -ErrorAction SilentlyContinue).Count
+                if ($outCount -gt 0) { $framesForEncode = $framesInterp; Write-Log "RIFE output frames: $outCount" } else { Write-Log "RIFE produced no frames; falling back." }
+            } else {
+                Write-Log "RIFE failed (exit $($res.ExitCode)). StdErr excerpt:"
+                Write-Host $res.StdErr.Substring(0,[Math]::Min(1000,$res.StdErr.Length))
+                Write-Log "Falling back to input frames."
+            }
+        } else {
+            Write-Log "RIFE exe not found at $RifePath. Skipping interpolation."
+        }
+    } else {
+        Write-Log "Interpolation disabled."
+    }
+
+    # 6) Encode frames -> video
+    # compute out fps: if interpolation applied, multiply
+    $appliedInterp = ($framesForEncode -ne $framesForInterp)
+    $outFps = if ($appliedInterp) { $Fps * $InterpFactor } else { $Fps }
+    Write-Log ("Encoding frames -> $videoFromFrames @ {0} fps" -f $outFps)
+    $patternEnc = Join-Path $framesForEncode "frame_%06d.png"
+    $cmd = "ffmpeg -y -framerate $outFps -i `"$patternEnc`" -c:v libx264 -preset slow -crf 18 -pix_fmt yuv420p `"$videoFromFrames`""
+    Run-Command -cmd $cmd
+
+    # 7) Color correction & stabilization
+    if ($UseColorStab) {
+        Write-Log "Color correct & stabilize -> $videoColorStab"
+        $transforms = Join-Path $clipDir "transforms.trf"
+        $cmd = "ffmpeg -y -i `"$videoFromFrames`" -vf vidstabdetect=shakiness=5:accuracy=15:result=`"$transforms`" -f null NUL"
+        Run-Command -cmd $cmd
+        $vf = "vidstabtransform=input=`"$transforms`":smoothing=30,eq=brightness=0.02:contrast=1.06:saturation=1.05"
+        $cmd = "ffmpeg -y -i `"$videoFromFrames`" -vf `"$vf`" -c:v libx264 -preset slow -crf 18 -pix_fmt yuv420p `"$videoColorStab`""
+        Run-Command -cmd $cmd
+    } else {
+        Write-Log "Color/Stab disabled; copying to color output"
+        Copy-Item $videoFromFrames $videoColorStab -Force
+    }
+
+    # 8) Extract keyframes (scene detection)
+    if ($UseKeyframes) {
+        Write-Log "Extracting keyframes to $keyframesDir"
+        if (Test-Path $keyframesDir) { Remove-Item $keyframesDir -Recurse -Force -ErrorAction SilentlyContinue }
+        New-Item -ItemType Directory -Path $keyframesDir | Out-Null
+        $kfOut = Join-Path $keyframesDir "kf_%06d.png"
+        $logScene = Join-Path $keyframesDir "scene_log.txt"
+        $cmd = "ffmpeg -y -i `"$videoColorStab`" -vf select='gt(scene,0.35)',showinfo -vsync vfr `"$kfOut`" -f null NUL 2> `"$logScene`""
+        Run-Command -cmd $cmd
+    }
+
+    # 9) Attach cleaned audio
+    Write-Log "Attaching audio -> $videoFinal"
+    $cmd = "ffmpeg -y -i `"$videoColorStab`" -i `"$audioClean`" -c:v copy -c:a aac -b:a 192k -shortest `"$videoFinal`""
+    Run-Command -cmd $cmd
+
+    if (Test-Path $videoFinal) {
+        $finalClips += (Resolve-Path $videoFinal).Path
+        Write-Log ("Clip done: {0}" -f $videoFinal)
+    } else {
+        Write-Log ("WARNING: final clip not produced for {0}" -f $vid.Name)
+    }
+
+    Write-Log "=== Finished: $($vid.Name) ===`n"
+}
+
+# Stitch final clips
+if ($finalClips.Count -eq 0) {
+    Write-Log "No final clips produced. Exiting."
+    exit 1
+}
+
+$finalOutputPath = Join-Path $Folder $Output
+if ($finalClips.Count -eq 1) {
+    Copy-Item $finalClips[0] $finalOutputPath -Force
+    Write-Log ("Single final clip copied to: {0}" -f $finalOutputPath)
+    Write-Log "Pipeline complete."
+    exit 0
+}
+
+# Build concat list file with absolute paths
+$listFile = Join-Path $workDir "concat_list.txt"
+$lines = $finalClips | ForEach-Object { "file '" + ($_ -replace "'", "''") + "'" }
+$lines | Set-Content -Path $listFile -Encoding ASCII
+
+Write-Log ("Stitching {0} clips -> {1}" -f $finalClips.Count, $finalOutputPath)
+$cmd = "ffmpeg -y -f concat -safe 0 -i `"$listFile`" -c copy `"$finalOutputPath`""
+Run-Command -cmd $cmd
+
+Write-Log "Pipeline finished successfully."
+Write-Log ("Final movie: {0}" -f $finalOutputPath)
