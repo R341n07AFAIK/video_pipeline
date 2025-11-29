@@ -13,11 +13,23 @@ Usage:
 Note: This script requires elevation to write to Program Files and the registry.
 #>
 
+# Define Write-Log function first (before any calls to it)
+function Write-Log {
+    param([string]$Msg)
+    $ts = (Get-Date).ToString('s')
+    Write-Host "[$ts] $Msg"
+}
+
 param(
-    [string]$InstallDir = "$env:ProgramFiles\\VideoPipeline",
+    [string]$InstallDir = "",
     [switch]$Force,
     [switch]$NoLaunch
 )
+
+# Set default if not provided
+if (-not $InstallDir) {
+    $InstallDir = Join-Path $env:ProgramFiles 'VideoPipeline'
+}
 
 # Load installer settings if present (installer_settings.json)
 $settingsPath = Join-Path (Split-Path -Parent $PSCommandPath) 'installer_settings.json'
@@ -38,19 +50,13 @@ if (Test-Path $settingsPath) {
     }
 }
 
-function Write-Log {
-    param([string]$Msg)
-    $ts = (Get-Date).ToString('s')
-    Write-Host "[$ts] $Msg"
-}
-
 function Assert-Elevated {
     if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
         Write-Log "Not elevated. Relaunching with elevation..."
         $elevArgs = "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`""
         if ($Force) { $elevArgs += " -Force" }
         if ($NoLaunch) { $elevArgs += " -NoLaunch" }
-        Start-Process -FilePath "powershell.exe" -ArgumentList $psArgs -Verb RunAs
+        Start-Process -FilePath "powershell.exe" -ArgumentList $elevArgs -Verb RunAs
         exit 0
     }
 }
