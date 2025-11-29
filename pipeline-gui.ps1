@@ -8,14 +8,14 @@ Add-Type -AssemblyName System.Drawing
 # Create main form
 $form = New-Object System.Windows.Forms.Form
 $form.Text = "Video Pipeline - GUI Controller"
-$form.Size = New-Object System.Drawing.Size(900, 700)
+$form.Size = New-Object System.Drawing.Size(900, 750)
 $form.StartPosition = "CenterScreen"
 $form.BackColor = [System.Drawing.Color]::FromArgb(240, 240, 240)
 
 # Title Panel
 $titlePanel = New-Object System.Windows.Forms.Panel
 $titlePanel.Dock = "Top"
-$titlePanel.Height = 60
+$titlePanel.Height = 70
 $titlePanel.BackColor = [System.Drawing.Color]::FromArgb(33, 33, 33)
 
 $titleLabel = New-Object System.Windows.Forms.Label
@@ -34,21 +34,22 @@ $mainContainer.Dock = "Fill"
 # Tab 1: Process Video
 $tab1 = New-Object System.Windows.Forms.TabPage
 $tab1.Text = "Process Video"
-$tab1.Padding = New-Object System.Windows.Forms.Padding(10)
+$tab1.Padding = New-Object System.Windows.Forms.Padding(15)
 
 # Input Folder Selection
 $inputLabel = New-Object System.Windows.Forms.Label
 $inputLabel.Text = "Input Folder:"
-$inputLabel.Location = New-Object System.Drawing.Point(10, 20)
+$inputLabel.Location = New-Object System.Drawing.Point(15, 15)
 $inputLabel.Size = New-Object System.Drawing.Size(100, 20)
 
 $inputBox = New-Object System.Windows.Forms.TextBox
-$inputBox.Location = New-Object System.Drawing.Point(120, 20)
-$inputBox.Size = New-Object System.Drawing.Size(600, 25)
+$inputBox.Location = New-Object System.Drawing.Point(135, 15)
+$inputBox.Size = New-Object System.Drawing.Size(580, 25)
+$inputBox.ReadOnly = $true
 
 $inputButton = New-Object System.Windows.Forms.Button
 $inputButton.Text = "Browse..."
-$inputButton.Location = New-Object System.Drawing.Point(730, 20)
+$inputButton.Location = New-Object System.Drawing.Point(725, 15)
 $inputButton.Size = New-Object System.Drawing.Size(80, 25)
 $inputButton.Add_Click({
     $dialog = New-Object System.Windows.Forms.FolderBrowserDialog
@@ -62,16 +63,17 @@ $inputButton.Add_Click({
 # Output Folder
 $outputLabel = New-Object System.Windows.Forms.Label
 $outputLabel.Text = "Output Folder:"
-$outputLabel.Location = New-Object System.Drawing.Point(10, 60)
+$outputLabel.Location = New-Object System.Drawing.Point(15, 50)
 $outputLabel.Size = New-Object System.Drawing.Size(100, 20)
 
 $outputBox = New-Object System.Windows.Forms.TextBox
-$outputBox.Location = New-Object System.Drawing.Point(120, 60)
-$outputBox.Size = New-Object System.Drawing.Size(600, 25)
+$outputBox.Location = New-Object System.Drawing.Point(135, 50)
+$outputBox.Size = New-Object System.Drawing.Size(580, 25)
+$outputBox.ReadOnly = $true
 
 $outputButton = New-Object System.Windows.Forms.Button
 $outputButton.Text = "Browse..."
-$outputButton.Location = New-Object System.Drawing.Point(730, 60)
+$outputButton.Location = New-Object System.Drawing.Point(725, 50)
 $outputButton.Size = New-Object System.Drawing.Size(80, 25)
 $outputButton.Add_Click({
     $dialog = New-Object System.Windows.Forms.FolderBrowserDialog
@@ -85,11 +87,11 @@ $outputButton.Add_Click({
 # Provider Selection
 $providerLabel = New-Object System.Windows.Forms.Label
 $providerLabel.Text = "AI Provider:"
-$providerLabel.Location = New-Object System.Drawing.Point(10, 100)
+$providerLabel.Location = New-Object System.Drawing.Point(15, 85)
 $providerLabel.Size = New-Object System.Drawing.Size(100, 20)
 
 $providerCombo = New-Object System.Windows.Forms.ComboBox
-$providerCombo.Location = New-Object System.Drawing.Point(120, 100)
+$providerCombo.Location = New-Object System.Drawing.Point(135, 85)
 $providerCombo.Size = New-Object System.Drawing.Size(200, 25)
 $providerCombo.Items.AddRange(@("grok", "midjourney", "comfyui", "none"))
 $providerCombo.SelectedIndex = 0
@@ -97,11 +99,11 @@ $providerCombo.SelectedIndex = 0
 # FPS Setting
 $fpsLabel = New-Object System.Windows.Forms.Label
 $fpsLabel.Text = "FPS:"
-$fpsLabel.Location = New-Object System.Drawing.Point(10, 140)
+$fpsLabel.Location = New-Object System.Drawing.Point(15, 120)
 $fpsLabel.Size = New-Object System.Drawing.Size(100, 20)
 
 $fpsSpinner = New-Object System.Windows.Forms.NumericUpDown
-$fpsSpinner.Location = New-Object System.Drawing.Point(120, 140)
+$fpsSpinner.Location = New-Object System.Drawing.Point(135, 120)
 $fpsSpinner.Size = New-Object System.Drawing.Size(100, 25)
 $fpsSpinner.Minimum = 12
 $fpsSpinner.Maximum = 120
@@ -110,11 +112,11 @@ $fpsSpinner.Value = 24
 # Codec Selection
 $codecLabel = New-Object System.Windows.Forms.Label
 $codecLabel.Text = "Codec:"
-$codecLabel.Location = New-Object System.Drawing.Point(10, 180)
+$codecLabel.Location = New-Object System.Drawing.Point(15, 155)
 $codecLabel.Size = New-Object System.Drawing.Size(100, 20)
 
 $codecCombo = New-Object System.Windows.Forms.ComboBox
-$codecCombo.Location = New-Object System.Drawing.Point(120, 180)
+$codecCombo.Location = New-Object System.Drawing.Point(135, 155)
 $codecCombo.Size = New-Object System.Drawing.Size(200, 25)
 $codecCombo.Items.AddRange(@("libx264", "libx265", "libvpx"))
 $codecCombo.SelectedIndex = 0
@@ -122,12 +124,12 @@ $codecCombo.SelectedIndex = 0
 # Log Display
 $logLabel = New-Object System.Windows.Forms.Label
 $logLabel.Text = "Processing Log:"
-$logLabel.Location = New-Object System.Drawing.Point(10, 220)
+$logLabel.Location = New-Object System.Drawing.Point(15, 195)
 $logLabel.Size = New-Object System.Drawing.Size(100, 20)
 
 $logBox = New-Object System.Windows.Forms.RichTextBox
-$logBox.Location = New-Object System.Drawing.Point(10, 250)
-$logBox.Size = New-Object System.Drawing.Size(800, 200)
+$logBox.Location = New-Object System.Drawing.Point(15, 220)
+$logBox.Size = New-Object System.Drawing.Size(800, 180)
 $logBox.ReadOnly = $true
 $logBox.BackColor = [System.Drawing.Color]::Black
 $logBox.ForeColor = [System.Drawing.Color]::LimeGreen
@@ -135,7 +137,7 @@ $logBox.ForeColor = [System.Drawing.Color]::LimeGreen
 # Process Button
 $processButton = New-Object System.Windows.Forms.Button
 $processButton.Text = "Process Video"
-$processButton.Location = New-Object System.Drawing.Point(10, 460)
+$processButton.Location = New-Object System.Drawing.Point(15, 410)
 $processButton.Size = New-Object System.Drawing.Size(150, 35)
 $processButton.BackColor = [System.Drawing.Color]::Green
 $processButton.ForeColor = [System.Drawing.Color]::White
@@ -178,20 +180,21 @@ $tab1.Controls.Add($processButton)
 # Tab 2: Batch Processing
 $tab2 = New-Object System.Windows.Forms.TabPage
 $tab2.Text = "Batch Processing"
-$tab2.Padding = New-Object System.Windows.Forms.Padding(10)
+$tab2.Padding = New-Object System.Windows.Forms.Padding(15)
 
 $batchLabel = New-Object System.Windows.Forms.Label
 $batchLabel.Text = "Batch Input Folder:"
-$batchLabel.Location = New-Object System.Drawing.Point(10, 20)
+$batchLabel.Location = New-Object System.Drawing.Point(15, 15)
 $batchLabel.Size = New-Object System.Drawing.Size(100, 20)
 
 $batchBox = New-Object System.Windows.Forms.TextBox
-$batchBox.Location = New-Object System.Drawing.Point(120, 20)
-$batchBox.Size = New-Object System.Drawing.Size(600, 25)
+$batchBox.Location = New-Object System.Drawing.Point(135, 15)
+$batchBox.Size = New-Object System.Drawing.Size(580, 25)
+$batchBox.ReadOnly = $true
 
 $batchButton = New-Object System.Windows.Forms.Button
 $batchButton.Text = "Browse..."
-$batchButton.Location = New-Object System.Drawing.Point(730, 20)
+$batchButton.Location = New-Object System.Drawing.Point(725, 15)
 $batchButton.Size = New-Object System.Drawing.Size(80, 25)
 $batchButton.Add_Click({
     $dialog = New-Object System.Windows.Forms.FolderBrowserDialog
@@ -204,16 +207,17 @@ $batchButton.Add_Click({
 
 $batchOutputLabel = New-Object System.Windows.Forms.Label
 $batchOutputLabel.Text = "Batch Output Folder:"
-$batchOutputLabel.Location = New-Object System.Drawing.Point(10, 60)
+$batchOutputLabel.Location = New-Object System.Drawing.Point(15, 50)
 $batchOutputLabel.Size = New-Object System.Drawing.Size(100, 20)
 
 $batchOutputBox = New-Object System.Windows.Forms.TextBox
-$batchOutputBox.Location = New-Object System.Drawing.Point(120, 60)
-$batchOutputBox.Size = New-Object System.Drawing.Size(600, 25)
+$batchOutputBox.Location = New-Object System.Drawing.Point(135, 50)
+$batchOutputBox.Size = New-Object System.Drawing.Size(580, 25)
+$batchOutputBox.ReadOnly = $true
 
 $batchOutputButton = New-Object System.Windows.Forms.Button
 $batchOutputButton.Text = "Browse..."
-$batchOutputButton.Location = New-Object System.Drawing.Point(730, 60)
+$batchOutputButton.Location = New-Object System.Drawing.Point(725, 50)
 $batchOutputButton.Size = New-Object System.Drawing.Size(80, 25)
 $batchOutputButton.Add_Click({
     $dialog = New-Object System.Windows.Forms.FolderBrowserDialog
@@ -225,15 +229,15 @@ $batchOutputButton.Add_Click({
 })
 
 $batchLogBox = New-Object System.Windows.Forms.RichTextBox
-$batchLogBox.Location = New-Object System.Drawing.Point(10, 100)
-$batchLogBox.Size = New-Object System.Drawing.Size(800, 350)
+$batchLogBox.Location = New-Object System.Drawing.Point(15, 90)
+$batchLogBox.Size = New-Object System.Drawing.Size(800, 310)
 $batchLogBox.ReadOnly = $true
 $batchLogBox.BackColor = [System.Drawing.Color]::Black
 $batchLogBox.ForeColor = [System.Drawing.Color]::LimeGreen
 
 $batchButton2 = New-Object System.Windows.Forms.Button
 $batchButton2.Text = "Start Batch"
-$batchButton2.Location = New-Object System.Drawing.Point(10, 460)
+$batchButton2.Location = New-Object System.Drawing.Point(15, 410)
 $batchButton2.Size = New-Object System.Drawing.Size(150, 35)
 $batchButton2.BackColor = [System.Drawing.Color]::Green
 $batchButton2.ForeColor = [System.Drawing.Color]::White
@@ -258,21 +262,37 @@ $tab2.Controls.Add($batchButton2)
 # Tab 3: Settings
 $tab3 = New-Object System.Windows.Forms.TabPage
 $tab3.Text = "Settings"
-$tab3.Padding = New-Object System.Windows.Forms.Padding(10)
+$tab3.Padding = New-Object System.Windows.Forms.Padding(15)
 
 $apiKeyLabel = New-Object System.Windows.Forms.Label
 $apiKeyLabel.Text = "Grok API Key:"
-$apiKeyLabel.Location = New-Object System.Drawing.Point(10, 20)
+$apiKeyLabel.Location = New-Object System.Drawing.Point(15, 15)
 $apiKeyLabel.Size = New-Object System.Drawing.Size(100, 20)
 
 $apiKeyBox = New-Object System.Windows.Forms.TextBox
-$apiKeyBox.Location = New-Object System.Drawing.Point(120, 20)
+$apiKeyBox.Location = New-Object System.Drawing.Point(135, 15)
 $apiKeyBox.Size = New-Object System.Drawing.Size(600, 25)
 $apiKeyBox.PasswordChar = '*'
 
+$midjourneyLabel = New-Object System.Windows.Forms.Label
+$midjourneyLabel.Text = "Midjourney Key:"
+$midjourneyLabel.Location = New-Object System.Drawing.Point(15, 50)
+$midjourneyLabel.Size = New-Object System.Drawing.Size(100, 20)
+
+$midjourneyBox = New-Object System.Windows.Forms.TextBox
+$midjourneyBox.Location = New-Object System.Drawing.Point(135, 50)
+$midjourneyBox.Size = New-Object System.Drawing.Size(600, 25)
+$midjourneyBox.PasswordChar = '*'
+
+$statusLabel = New-Object System.Windows.Forms.Label
+$statusLabel.Text = "Status: Ready"
+$statusLabel.Location = New-Object System.Drawing.Point(15, 90)
+$statusLabel.Size = New-Object System.Drawing.Size(400, 20)
+$statusLabel.ForeColor = [System.Drawing.Color]::Green
+
 $saveButton = New-Object System.Windows.Forms.Button
 $saveButton.Text = "Save Settings"
-$saveButton.Location = New-Object System.Drawing.Point(10, 60)
+$saveButton.Location = New-Object System.Drawing.Point(15, 125)
 $saveButton.Size = New-Object System.Drawing.Size(150, 35)
 $saveButton.BackColor = [System.Drawing.Color]::Blue
 $saveButton.ForeColor = [System.Drawing.Color]::White
@@ -280,12 +300,19 @@ $saveButton.Font = New-Object System.Drawing.Font("Arial", 11, [System.Drawing.F
 $saveButton.Add_Click({
     if ($apiKeyBox.Text) {
         [Environment]::SetEnvironmentVariable("XAI_API_KEY", $apiKeyBox.Text, "User")
-        [System.Windows.Forms.MessageBox]::Show("Settings saved!", "Success")
     }
+    if ($midjourneyBox.Text) {
+        [Environment]::SetEnvironmentVariable("MIDJOURNEY_API_KEY", $midjourneyBox.Text, "User")
+    }
+    $statusLabel.Text = "Status: Settings saved!"
+    $statusLabel.ForeColor = [System.Drawing.Color]::Green
 })
 
 $tab3.Controls.Add($apiKeyLabel)
 $tab3.Controls.Add($apiKeyBox)
+$tab3.Controls.Add($midjourneyLabel)
+$tab3.Controls.Add($midjourneyBox)
+$tab3.Controls.Add($statusLabel)
 $tab3.Controls.Add($saveButton)
 
 # Add tabs to container
