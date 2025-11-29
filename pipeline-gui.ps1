@@ -24,19 +24,8 @@ $titleLabel.Font = New-Object System.Drawing.Font("Arial", 16, [System.Drawing.F
 $titleLabel.ForeColor = [System.Drawing.Color]::White
 $titleLabel.AutoSize = $false
 $titleLabel.Dock = "Fill"
-$titleLabel.TextAlign = "MiddleCenter"
-$titlePanel.Controls.Add($titleLabel)
 
-# Main Container
-$mainContainer = New-Object System.Windows.Forms.TabControl
-$mainContainer.Dock = "Fill"
-
-# Tab 1: Process Video
-$tab1 = New-Object System.Windows.Forms.TabPage
-$tab1.Text = "Process Video"
-$tab1.Padding = New-Object System.Windows.Forms.Padding(15)
-
-# Input Folder Selection
+# Main Container (fills form directly; banner removed)
 $inputLabel = New-Object System.Windows.Forms.Label
 $inputLabel.Text = "Input Folder:"
 $inputLabel.Location = New-Object System.Drawing.Point(15, 15)
