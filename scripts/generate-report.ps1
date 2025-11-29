@@ -123,8 +123,8 @@ switch ($OutputFormat) {
     <div class="section">
         <h2>Errors</h2>
         <ul>
-        $(foreach ($error in $stats.Errors | Select-Object -First 10) {
-            "<li>$error</li>"
+        $(foreach ($errorItem in $stats.Errors | Select-Object -First 10) {
+            "<li>$errorItem</li>"
         })
         </ul>
     </div>

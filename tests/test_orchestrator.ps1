@@ -131,7 +131,7 @@ Write-TestSection "API Configuration Tests"
 
 $apiKeys = @("XAI_API_KEY", "MIDJOURNEY_API_KEY")
 foreach ($key in $apiKeys) {
-    $keySet = $null -ne $env:$key
+    $keySet = $null -ne [System.Environment]::GetEnvironmentVariable($key)
     Write-TestResult "API Key: $key" $keySet "$(if ($keySet) { 'configured' } else { 'not configured' })"
     if ($keySet) { $passCount++ } else { $failCount++ }
 }
