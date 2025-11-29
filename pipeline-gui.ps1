@@ -176,68 +176,14 @@ $processButton.BackColor = [System.Drawing.Color]::Green
 $processButton.ForeColor = [System.Drawing.Color]::White
 $processButton.Font = New-Object System.Drawing.Font('Arial',10,[System.Drawing.FontStyle]::Bold)
 $processButton.Add_Click({
-    if ([string]::IsNullOrWhiteSpace($inputBox.Text)) {
-        [System.Windows.Forms.MessageBox]::Show('Please select an input folder','Error')
-        return
-    }
-    if ([string]::IsNullOrWhiteSpace($outputBox.Text)) {
-        [System.Windows.Forms.MessageBox]::Show('Please select an output folder','Error')
-        return
-    }
-
+    if ([string]::IsNullOrWhiteSpace($inputBox.Text)) { [System.Windows.Forms.MessageBox]::Show('Please select an input folder','Error'); return }
+    if ([string]::IsNullOrWhiteSpace($outputBox.Text)) { [System.Windows.Forms.MessageBox]::Show('Please select an output folder','Error'); return }
     $logBox.AppendText("Starting processing...`n")
     $logBox.AppendText("Input: $($inputBox.Text)`n")
     $logBox.AppendText("Output: $($outputBox.Text)`n")
     $logBox.AppendText("Provider: $($providerCombo.SelectedItem)`n")
     $logBox.AppendText("FPS: $($fpsSpinner.Value)`n")
     $logBox.AppendText("Codec: $($codecCombo.SelectedItem)`n")
-
-    # Map provider to script
-    $scriptDir = Split-Path -Parent $PSCommandPath
-    switch ($providerCombo.SelectedItem) {
-        'grok'       { $scriptFile = Join-Path $scriptDir 'providers\process-grok.ps1' }
-        'comfyui'    { $scriptFile = Join-Path $scriptDir 'providers\process-comfyui.ps1' }
-        'midjourney' { $scriptFile = Join-Path $scriptDir 'providers\process-midjourney.ps1' }
-        default      { $scriptFile = '' }
-    }
-
-    if (-not $scriptFile -or -not (Test-Path $scriptFile)) {
-        $logBox.AppendText("ERROR: Provider script not found: $scriptFile`n")
-        return
-    }
-
-    # Start background job to run provider script
-    $job = Start-Job -ScriptBlock {
-        param($sf,$inFile,$outFile)
-        & $sf -InputFile $inFile -OutputFile $outFile
-    } -ArgumentList $scriptFile, $inputBox.Text, $outputBox.Text
-
-    $logBox.AppendText("Started background job id $($job.Id) for provider $($providerCombo.SelectedItem)`n")
-
-    # Timer to poll job status and collect output when done
-    $timer = New-Object System.Windows.Forms.Timer
-    $timer.Interval = 1000
-    $timer.Add_Tick({
-        $j = Get-Job -Id $job.Id -ErrorAction SilentlyContinue
-        if ($null -ne $j) {
-            if ($j.State -eq 'Completed') {
-                try { $out = Receive-Job -Id $job.Id -Keep -ErrorAction SilentlyContinue } catch { $out = $_ }
-                if ($out) { foreach ($line in $out) { $logBox.AppendText($line + "`n") } }
-                $logBox.AppendText("Job $($job.Id) completed.`n")
-                Remove-Job -Id $job.Id -Force -ErrorAction SilentlyContinue
-                $timer.Stop(); $timer.Dispose()
-            } elseif ($j.State -eq 'Failed' -or $j.State -eq 'Stopped') {
-                $err = Receive-Job -Id $job.Id -Keep -ErrorAction SilentlyContinue
-                $logBox.AppendText("Job $($job.Id) failed: $err`n")
-                Remove-Job -Id $job.Id -Force -ErrorAction SilentlyContinue
-                $timer.Stop(); $timer.Dispose()
-            }
-        } else {
-            # job may not exist yet; wait
-        }
-    })
-    $timer.Start()
-})
 })
 
 # Add controls to tab1
