@@ -43,9 +43,9 @@ $scriptPath = Split-Path -Parent $PSCommandPath
 function Write-Header {
     param([string]$Title)
     Clear-Host
-    Write-Host "╔════════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
-    Write-Host "║  $Title" -ForegroundColor Cyan
-    Write-Host "╚════════════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
+    Write-Host "===============================================================" -ForegroundColor Cyan
+    Write-Host "  $Title" -ForegroundColor Cyan
+    Write-Host "===============================================================" -ForegroundColor Cyan
     Write-Host ""
 }
 

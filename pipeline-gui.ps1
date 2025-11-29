@@ -1,4 +1,4 @@
-﻿# pipeline-gui.ps1
+# pipeline-gui.ps1
 # Video Pipeline GUI using Windows Forms
 # Provides interactive interface for video processing
 
@@ -38,7 +38,7 @@ $tab1.Padding = New-Object System.Windows.Forms.Padding(10)
 
 # Input Folder Selection
 $inputLabel = New-Object System.Windows.Forms.Label
-$inputLabel.Text = "Input Video:"
+$inputLabel.Text = "Input Folder:"
 $inputLabel.Location = New-Object System.Drawing.Point(10, 20)
 $inputLabel.Size = New-Object System.Drawing.Size(100, 20)
 
@@ -51,16 +51,17 @@ $inputButton.Text = "Browse..."
 $inputButton.Location = New-Object System.Drawing.Point(730, 20)
 $inputButton.Size = New-Object System.Drawing.Size(80, 25)
 $inputButton.Add_Click({
-    $dialog = New-Object System.Windows.Forms.OpenFileDialog
-    $dialog.Filter = "Video Files (*.mp4;*.mov;*.mkv)|*.mp4;*.mov;*.mkv"
+    $dialog = New-Object System.Windows.Forms.FolderBrowserDialog
+    $dialog.Description = "Select Input Folder"
+    $dialog.RootFolder = [System.Environment+SpecialFolder]::MyComputer
     if ($dialog.ShowDialog() -eq "OK") {
-        $inputBox.Text = $dialog.FileName
+        $inputBox.Text = $dialog.SelectedPath
     }
 })
 
 # Output Folder
 $outputLabel = New-Object System.Windows.Forms.Label
-$outputLabel.Text = "Output Video:"
+$outputLabel.Text = "Output Folder:"
 $outputLabel.Location = New-Object System.Drawing.Point(10, 60)
 $outputLabel.Size = New-Object System.Drawing.Size(100, 20)
 
@@ -73,11 +74,11 @@ $outputButton.Text = "Browse..."
 $outputButton.Location = New-Object System.Drawing.Point(730, 60)
 $outputButton.Size = New-Object System.Drawing.Size(80, 25)
 $outputButton.Add_Click({
-    $dialog = New-Object System.Windows.Forms.SaveFileDialog
-    $dialog.Filter = "MP4 Files (*.mp4)|*.mp4"
-    $dialog.DefaultExt = "mp4"
+    $dialog = New-Object System.Windows.Forms.FolderBrowserDialog
+    $dialog.Description = "Select Output Folder"
+    $dialog.RootFolder = [System.Environment+SpecialFolder]::MyComputer
     if ($dialog.ShowDialog() -eq "OK") {
-        $outputBox.Text = $dialog.FileName
+        $outputBox.Text = $dialog.SelectedPath
     }
 })
 
@@ -141,65 +142,68 @@ $processButton.ForeColor = [System.Drawing.Color]::White
 $processButton.Font = New-Object System.Drawing.Font("Arial", 11, [System.Drawing.FontStyle]::Bold)
 $processButton.Add_Click({
     if ([string]::IsNullOrWhiteSpace($inputBox.Text)) {
-        [System.Windows.Forms.MessageBox]::Show("Please select an input video", "Error")
+        [System.Windows.Forms.MessageBox]::Show("Please select an input folder", "Error")
         return
     }
-    
+    if ([string]::IsNullOrWhiteSpace($outputBox.Text)) {
+        [System.Windows.Forms.MessageBox]::Show("Please select an output folder", "Error")
+        return
+    }
+
     $logBox.AppendText("Starting processing...`n")
     $logBox.AppendText("Input: $($inputBox.Text)`n")
     $logBox.AppendText("Output: $($outputBox.Text)`n")
     $logBox.AppendText("Provider: $($providerCombo.SelectedItem)`n")
-    $logBox.AppendText("FPS: $($fpsSpinner.Value)`n`n")
-    
-    # Call extraction script
-    try {
-        $logBox.AppendText("Extracting frames...`n")
-        & ".\extract_frames.ps1" -VideoPath $inputBox.Text -OutputFolder "temp_frames" -FPS $fpsSpinner.Value
-        $logBox.AppendText("Frames extracted successfully`n`n")
-        
-        $logBox.AppendText("Stitching frames to video...`n")
-        & ".\composite_video_from_images.ps1" -FramesFolder "temp_frames" -OutputVideo $outputBox.Text -FPS $fpsSpinner.Value
-        $logBox.AppendText("Processing complete!`n")
-        
-        [System.Windows.Forms.MessageBox]::Show("Processing complete!", "Success")
-    } catch {
-        $logBox.AppendText("Error: $_`n")
-        [System.Windows.Forms.MessageBox]::Show("Processing failed: $_", "Error")
-    }
+    $logBox.AppendText("FPS: $($fpsSpinner.Value)`n")
+    $logBox.AppendText("Codec: $($codecCombo.SelectedItem)`n")
 })
 
-# Add controls to tab1
-$tab1.Controls.AddRange(@($inputLabel, $inputBox, $inputButton, $outputLabel, $outputBox, $outputButton,
-    $providerLabel, $providerCombo, $fpsLabel, $fpsSpinner, $codecLabel, $codecCombo,
-    $logLabel, $logBox, $processButton))
+# Tab 1 Controls
+$tab1.Controls.Add($inputLabel)
+$tab1.Controls.Add($inputBox)
+$tab1.Controls.Add($inputButton)
+$tab1.Controls.Add($outputLabel)
+$tab1.Controls.Add($outputBox)
+$tab1.Controls.Add($outputButton)
+$tab1.Controls.Add($providerLabel)
+$tab1.Controls.Add($providerCombo)
+$tab1.Controls.Add($fpsLabel)
+$tab1.Controls.Add($fpsSpinner)
+$tab1.Controls.Add($codecLabel)
+$tab1.Controls.Add($codecCombo)
+$tab1.Controls.Add($logLabel)
+$tab1.Controls.Add($logBox)
+$tab1.Controls.Add($processButton)
 
 # Tab 2: Batch Processing
 $tab2 = New-Object System.Windows.Forms.TabPage
-$tab2.Text = "Batch Process"
-$tab2.Padding = New-Object System.Drawing.Padding(10)
+$tab2.Text = "Batch Processing"
+$tab2.Padding = New-Object System.Windows.Forms.Padding(10)
 
-$batchInputLabel = New-Object System.Windows.Forms.Label
-$batchInputLabel.Text = "Input Folder:"
-$batchInputLabel.Location = New-Object System.Drawing.Point(10, 20)
-$batchInputLabel.Size = New-Object System.Drawing.Size(100, 20)
+$batchLabel = New-Object System.Windows.Forms.Label
+$batchLabel.Text = "Batch Input Folder:"
+$batchLabel.Location = New-Object System.Drawing.Point(10, 20)
+$batchLabel.Size = New-Object System.Drawing.Size(100, 20)
 
-$batchInputBox = New-Object System.Windows.Forms.TextBox
-$batchInputBox.Location = New-Object System.Drawing.Point(120, 20)
-$batchInputBox.Size = New-Object System.Drawing.Size(600, 25)
+$batchBox = New-Object System.Windows.Forms.TextBox
+$batchBox.Location = New-Object System.Drawing.Point(120, 20)
+$batchBox.Size = New-Object System.Drawing.Size(600, 25)
 
-$batchInputButton = New-Object System.Windows.Forms.Button
-$batchInputButton.Text = "Browse..."
-$batchInputButton.Location = New-Object System.Drawing.Point(730, 20)
-$batchInputButton.Size = New-Object System.Drawing.Size(80, 25)
-$batchInputButton.Add_Click({
+$batchButton = New-Object System.Windows.Forms.Button
+$batchButton.Text = "Browse..."
+$batchButton.Location = New-Object System.Drawing.Point(730, 20)
+$batchButton.Size = New-Object System.Drawing.Size(80, 25)
+$batchButton.Add_Click({
     $dialog = New-Object System.Windows.Forms.FolderBrowserDialog
+    $dialog.Description = "Select Batch Input Folder"
+    $dialog.RootFolder = [System.Environment+SpecialFolder]::MyComputer
     if ($dialog.ShowDialog() -eq "OK") {
-        $batchInputBox.Text = $dialog.SelectedPath
+        $batchBox.Text = $dialog.SelectedPath
     }
 })
 
 $batchOutputLabel = New-Object System.Windows.Forms.Label
-$batchOutputLabel.Text = "Output Folder:"
+$batchOutputLabel.Text = "Batch Output Folder:"
 $batchOutputLabel.Location = New-Object System.Drawing.Point(10, 60)
 $batchOutputLabel.Size = New-Object System.Drawing.Size(100, 20)
 
@@ -213,119 +217,83 @@ $batchOutputButton.Location = New-Object System.Drawing.Point(730, 60)
 $batchOutputButton.Size = New-Object System.Drawing.Size(80, 25)
 $batchOutputButton.Add_Click({
     $dialog = New-Object System.Windows.Forms.FolderBrowserDialog
+    $dialog.Description = "Select Batch Output Folder"
+    $dialog.RootFolder = [System.Environment+SpecialFolder]::MyComputer
     if ($dialog.ShowDialog() -eq "OK") {
         $batchOutputBox.Text = $dialog.SelectedPath
     }
 })
 
-$batchProviderLabel = New-Object System.Windows.Forms.Label
-$batchProviderLabel.Text = "AI Provider:"
-$batchProviderLabel.Location = New-Object System.Drawing.Point(10, 100)
-$batchProviderLabel.Size = New-Object System.Drawing.Size(100, 20)
-
-$batchProviderCombo = New-Object System.Windows.Forms.ComboBox
-$batchProviderCombo.Location = New-Object System.Drawing.Point(120, 100)
-$batchProviderCombo.Size = New-Object System.Drawing.Size(200, 25)
-$batchProviderCombo.Items.AddRange(@("grok", "midjourney", "comfyui"))
-$batchProviderCombo.SelectedIndex = 0
-
 $batchLogBox = New-Object System.Windows.Forms.RichTextBox
-$batchLogBox.Location = New-Object System.Drawing.Point(10, 150)
-$batchLogBox.Size = New-Object System.Drawing.Size(800, 300)
+$batchLogBox.Location = New-Object System.Drawing.Point(10, 100)
+$batchLogBox.Size = New-Object System.Drawing.Size(800, 350)
 $batchLogBox.ReadOnly = $true
 $batchLogBox.BackColor = [System.Drawing.Color]::Black
 $batchLogBox.ForeColor = [System.Drawing.Color]::LimeGreen
 
-$batchProcessButton = New-Object System.Windows.Forms.Button
-$batchProcessButton.Text = "Process Batch"
-$batchProcessButton.Location = New-Object System.Drawing.Point(10, 460)
-$batchProcessButton.Size = New-Object System.Drawing.Size(150, 35)
-$batchProcessButton.BackColor = [System.Drawing.Color]::Green
-$batchProcessButton.ForeColor = [System.Drawing.Color]::White
-$batchProcessButton.Font = New-Object System.Drawing.Font("Arial", 11, [System.Drawing.FontStyle]::Bold)
-$batchProcessButton.Add_Click({
-    if ([string]::IsNullOrWhiteSpace($batchInputBox.Text)) {
-        [System.Windows.Forms.MessageBox]::Show("Please select input folder", "Error")
+$batchButton2 = New-Object System.Windows.Forms.Button
+$batchButton2.Text = "Start Batch"
+$batchButton2.Location = New-Object System.Drawing.Point(10, 460)
+$batchButton2.Size = New-Object System.Drawing.Size(150, 35)
+$batchButton2.BackColor = [System.Drawing.Color]::Green
+$batchButton2.ForeColor = [System.Drawing.Color]::White
+$batchButton2.Font = New-Object System.Drawing.Font("Arial", 11, [System.Drawing.FontStyle]::Bold)
+$batchButton2.Add_Click({
+    if ([string]::IsNullOrWhiteSpace($batchBox.Text)) {
+        [System.Windows.Forms.MessageBox]::Show("Please select a batch input folder", "Error")
         return
     }
-    
-    $batchLogBox.AppendText("Starting batch processing...`n")
-    $batchLogBox.AppendText("Input: $($batchInputBox.Text)`n")
-    $batchLogBox.AppendText("Output: $($batchOutputBox.Text)`n`n")
-    
-    try {
-        & ".\orchestrator.ps1" -InputFolder $batchInputBox.Text -OutputFolder $batchOutputBox.Text -Providers @($batchProviderCombo.SelectedItem)
-        $batchLogBox.AppendText("Batch processing complete!`n")
-        [System.Windows.Forms.MessageBox]::Show("Batch processing complete!", "Success")
-    } catch {
-        $batchLogBox.AppendText("Error: $_`n")
-    }
+    $batchLogBox.AppendText("Starting batch processing from: $($batchBox.Text)`n")
 })
 
-$tab2.Controls.AddRange(@($batchInputLabel, $batchInputBox, $batchInputButton,
-    $batchOutputLabel, $batchOutputBox, $batchOutputButton,
-    $batchProviderLabel, $batchProviderCombo,
-    $batchLogBox, $batchProcessButton))
+$tab2.Controls.Add($batchLabel)
+$tab2.Controls.Add($batchBox)
+$tab2.Controls.Add($batchButton)
+$tab2.Controls.Add($batchOutputLabel)
+$tab2.Controls.Add($batchOutputBox)
+$tab2.Controls.Add($batchOutputButton)
+$tab2.Controls.Add($batchLogBox)
+$tab2.Controls.Add($batchButton2)
 
 # Tab 3: Settings
 $tab3 = New-Object System.Windows.Forms.TabPage
 $tab3.Text = "Settings"
 $tab3.Padding = New-Object System.Windows.Forms.Padding(10)
 
-$apiLabel = New-Object System.Windows.Forms.Label
-$apiLabel.Text = "API Configuration"
-$apiLabel.Font = New-Object System.Drawing.Font("Arial", 12, [System.Drawing.FontStyle]::Bold)
-$apiLabel.Location = New-Object System.Drawing.Point(10, 10)
-$apiLabel.Size = New-Object System.Drawing.Size(300, 25)
+$apiKeyLabel = New-Object System.Windows.Forms.Label
+$apiKeyLabel.Text = "Grok API Key:"
+$apiKeyLabel.Location = New-Object System.Drawing.Point(10, 20)
+$apiKeyLabel.Size = New-Object System.Drawing.Size(100, 20)
 
-$grokLabel = New-Object System.Windows.Forms.Label
-$grokLabel.Text = "Grok API Key:"
-$grokLabel.Location = New-Object System.Drawing.Point(10, 50)
-$grokLabel.Size = New-Object System.Drawing.Size(100, 20)
+$apiKeyBox = New-Object System.Windows.Forms.TextBox
+$apiKeyBox.Location = New-Object System.Drawing.Point(120, 20)
+$apiKeyBox.Size = New-Object System.Drawing.Size(600, 25)
+$apiKeyBox.PasswordChar = '*'
 
-$grokBox = New-Object System.Windows.Forms.TextBox
-$grokBox.Location = New-Object System.Drawing.Point(120, 50)
-$grokBox.Size = New-Object System.Drawing.Size(400, 25)
-$grokBox.PasswordChar = '*'
-$grokBox.Text = $env:XAI_API_KEY
-
-$grokSaveButton = New-Object System.Windows.Forms.Button
-$grokSaveButton.Text = "Save"
-$grokSaveButton.Location = New-Object System.Drawing.Point(530, 50)
-$grokSaveButton.Size = New-Object System.Drawing.Size(80, 25)
-$grokSaveButton.Add_Click({
-    [Environment]::SetEnvironmentVariable("XAI_API_KEY", $grokBox.Text, "User")
-    [System.Windows.Forms.MessageBox]::Show("Grok API Key saved (restart PowerShell to apply)", "Success")
+$saveButton = New-Object System.Windows.Forms.Button
+$saveButton.Text = "Save Settings"
+$saveButton.Location = New-Object System.Drawing.Point(10, 60)
+$saveButton.Size = New-Object System.Drawing.Size(150, 35)
+$saveButton.BackColor = [System.Drawing.Color]::Blue
+$saveButton.ForeColor = [System.Drawing.Color]::White
+$saveButton.Font = New-Object System.Drawing.Font("Arial", 11, [System.Drawing.FontStyle]::Bold)
+$saveButton.Add_Click({
+    if ($apiKeyBox.Text) {
+        [Environment]::SetEnvironmentVariable("XAI_API_KEY", $apiKeyBox.Text, "User")
+        [System.Windows.Forms.MessageBox]::Show("Settings saved!", "Success")
+    }
 })
 
-$mjLabel = New-Object System.Windows.Forms.Label
-$mjLabel.Text = "Midjourney API Key:"
-$mjLabel.Location = New-Object System.Drawing.Point(10, 90)
-$mjLabel.Size = New-Object System.Drawing.Size(100, 20)
+$tab3.Controls.Add($apiKeyLabel)
+$tab3.Controls.Add($apiKeyBox)
+$tab3.Controls.Add($saveButton)
 
-$mjBox = New-Object System.Windows.Forms.TextBox
-$mjBox.Location = New-Object System.Drawing.Point(120, 90)
-$mjBox.Size = New-Object System.Drawing.Size(400, 25)
-$mjBox.PasswordChar = '*'
-$mjBox.Text = $env:MIDJOURNEY_API_KEY
-
-$mjSaveButton = New-Object System.Windows.Forms.Button
-$mjSaveButton.Text = "Save"
-$mjSaveButton.Location = New-Object System.Drawing.Point(530, 90)
-$mjSaveButton.Size = New-Object System.Drawing.Size(80, 25)
-$mjSaveButton.Add_Click({
-    [Environment]::SetEnvironmentVariable("MIDJOURNEY_API_KEY", $mjBox.Text, "User")
-    [System.Windows.Forms.MessageBox]::Show("Midjourney API Key saved (restart PowerShell to apply)", "Success")
-})
-
-$tab3.Controls.AddRange(@($apiLabel, $grokLabel, $grokBox, $grokSaveButton, $mjLabel, $mjBox, $mjSaveButton))
-
-# Add tabs to main container
+# Add tabs to container
 $mainContainer.TabPages.Add($tab1)
 $mainContainer.TabPages.Add($tab2)
 $mainContainer.TabPages.Add($tab3)
 
-# Add components to form
+# Add containers to form
 $form.Controls.Add($titlePanel)
 $form.Controls.Add($mainContainer)
 
