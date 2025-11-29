@@ -1,0 +1,30 @@
+{
+  "appName": "Video Pipeline",
+  "version": "1.0.0",
+  "installDir": "${env:ProgramFiles}\\VideoPipeline",
+  "installScope": "machine", 
+  "includePatterns": ["**/*"],
+  "excludePatterns": ["logs/**", "temp/**", "input/**", "output/**", "**/*.mp4", "**/*.mkv", "**/*.zip"],
+  "createStartMenuShortcuts": true,
+  "createDesktopShortcut": false,
+  "launchOnComplete": true,
+  "registerUninstall": true,
+  "prerequisites": {
+    "ffmpeg": {
+      "required": true,
+      "minVersion": "8.0"
+    },
+    "python": {
+      "required": true,
+      "minVersion": "3.10"
+    }
+  },
+  "postInstallScripts": ["setup-environment.ps1"],
+  "preInstallCheckScript": null,
+  "logPath": "logs",
+  "shortcutIcon": "web-gui\\favicon.ico",
+  "fileMappings": {
+    "source":".",
+    "destination":"{installDir}"
+  }
+}
