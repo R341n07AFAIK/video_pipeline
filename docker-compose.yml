@@ -1,0 +1,29 @@
+﻿version: '3.8'
+
+services:
+  comfyui:
+    image: comfyanonymous/comfyui:latest
+    container_name: comfyui-pipeline
+    ports:
+      - "8188:8188"
+    volumes:
+      - ./comfyui_models:/root/.comfy/models
+      - ./comfyui_output:/root/ComfyUI/output
+    environment:
+      - CUDA_VISIBLE_DEVICES=0
+    restart: unless-stopped
+    networks:
+      - pipeline
+
+  ffmpeg:
+    image: jrottenberg/ffmpeg:latest
+    container_name: ffmpeg-pipeline
+    volumes:
+      - ./input:/input
+      - ./output:/output
+    networks:
+      - pipeline
+
+networks:
+  pipeline:
+    driver: bridge

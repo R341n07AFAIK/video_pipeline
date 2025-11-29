@@ -1,0 +1,41 @@
+﻿{
+  "pipeline": {
+    "name": "Video Processing Pipeline",
+    "version": "1.0",
+    "description": "Unified video processing with AI integration"
+  },
+  "video": {
+    "fps": 24,
+    "codec": "libx264",
+    "preset": "medium",
+    "quality": 23,
+    "resolution": "1920x1080"
+  },
+  "providers": {
+    "enabled": ["grok"],
+    "grok": {
+      "enabled": true,
+      "endpoint": "https://api.x.ai/video/process"
+    },
+    "midjourney": {
+      "enabled": false,
+      "endpoint": "https://api.midjourney.com/v1/process"
+    },
+    "comfyui": {
+      "enabled": false,
+      "server": "http://localhost:8188"
+    }
+  },
+  "paths": {
+    "input": "input",
+    "output": "output",
+    "temp": "temp",
+    "logs": "logs"
+  },
+  "processing": {
+    "extract_fps": 24,
+    "stitch_fps": 24,
+    "upscale_factor": 1,
+    "batch_size": 5
+  }
+}

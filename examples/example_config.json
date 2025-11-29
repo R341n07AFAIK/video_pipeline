@@ -1,0 +1,90 @@
+{
+  "pipeline": {
+    "name": "High Quality Video Processing",
+    "description": "Example configuration for high-quality video output",
+    "version": "1.0"
+  },
+  "video_defaults": {
+    "codec": "libx264",
+    "preset": "medium",
+    "crf": 22,
+    "bitrate": "8000k",
+    "fps": 30,
+    "resolution": "1920x1080",
+    "audio_codec": "aac",
+    "audio_bitrate": "192k"
+  },
+  "ai_providers": {
+    "grok": {
+      "enabled": true,
+      "priority": 1,
+      "endpoint": "https://api.x.ai/v1",
+      "model": "grok-vision-beta",
+      "timeout": 120,
+      "retry_count": 3,
+      "batch_size": 1
+    },
+    "midjourney": {
+      "enabled": true,
+      "priority": 2,
+      "endpoint": "https://api.midjourney.com/v1",
+      "timeout": 300,
+      "retry_count": 2,
+      "batch_size": 1
+    },
+    "comfyui": {
+      "enabled": true,
+      "priority": 3,
+      "host": "127.0.0.1",
+      "port": 8188,
+      "secure": false,
+      "timeout": 300,
+      "batch_size": 10
+    }
+  },
+  "processing": {
+    "mode": "serial",
+    "parallel_threads": 1,
+    "batch_size": 1,
+    "frame_extraction_fps": 1,
+    "segment_duration": 600
+  },
+  "api_defaults": {
+    "timeout": 120,
+    "retry_count": 3,
+    "retry_delay_ms": 1000,
+    "request_delay_ms": 500,
+    "fallback_provider": "comfyui",
+    "max_concurrent_requests": 1
+  },
+  "paths": {
+    "input": "./input",
+    "output": "./output",
+    "logs": "./logs",
+    "temp": "./temp",
+    "models": "./models",
+    "cache": "./cache"
+  },
+  "logging": {
+    "level": "INFO",
+    "enabled": true,
+    "format": "timestamp|level|message",
+    "rotation": "daily",
+    "retention_days": 30,
+    "console_output": true
+  },
+  "performance": {
+    "gpu_acceleration": true,
+    "ffmpeg_threads": 8,
+    "memory_max_mb": 4096,
+    "disk_cache_mb": 1024,
+    "enable_profiling": false
+  },
+  "quality": {
+    "prefer_quality": true,
+    "upscaling_method": "espcn",
+    "upscaling_factor": 2,
+    "denoising_enabled": true,
+    "denoising_strength": 0.5
+  }
+}

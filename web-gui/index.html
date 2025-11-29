@@ -1,0 +1,198 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Pipeline - Web GUI</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1> Video Pipeline Controller</h1>
+            <p>AI-Powered Video Processing</p>
+        </header>
+
+        <div class="tabs">
+            <button class="tab-button active" onclick="switchTab('process')">Process Video</button>
+            <button class="tab-button" onclick="switchTab('batch')">Batch Process</button>
+            <button class="tab-button" onclick="switchTab('settings')">Settings</button>
+            <button class="tab-button" onclick="switchTab('status')">Status</button>
+        </div>
+
+        <!-- Process Tab -->
+        <div id="process" class="tab-content active">
+            <div class="form-group">
+                <label for="inputVideo">Input Video:</label>
+                <div class="input-group">
+                    <input type="text" id="inputVideo" placeholder="Select video file" readonly>
+                    <button onclick="selectFile()">Browse</button>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="outputVideo">Output Video:</label>
+                <div class="input-group">
+                    <input type="text" id="outputVideo" placeholder="Enter output filename" value="output.mp4">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="provider">AI Provider:</label>
+                    <select id="provider">
+                        <option value="none">None (Local Processing)</option>
+                        <option value="grok">Grok (xAI)</option>
+                        <option value="midjourney">Midjourney</option>
+                        <option value="comfyui">ComfyUI</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="fps">FPS:</label>
+                    <input type="number" id="fps" min="12" max="120" value="24">
+                </div>
+
+                <div class="form-group">
+                    <label for="codec">Codec:</label>
+                    <select id="codec">
+                        <option value="libx264">H.264</option>
+                        <option value="libx265">H.265/HEVC</option>
+                        <option value="libvpx">VP8/VP9</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Log Output:</label>
+                <div id="log" class="log-output"></div>
+            </div>
+
+            <div class="button-group">
+                <button class="btn btn-primary" onclick="processVideo()">Process Video</button>
+                <button class="btn btn-secondary" onclick="clearLog()">Clear Log</button>
+            </div>
+        </div>
+
+        <!-- Batch Tab -->
+        <div id="batch" class="tab-content">
+            <div class="form-group">
+                <label for="batchInput">Input Folder:</label>
+                <div class="input-group">
+                    <input type="text" id="batchInput" placeholder="Select input folder" readonly>
+                    <button onclick="selectFolder('input')">Browse</button>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="batchOutput">Output Folder:</label>
+                <div class="input-group">
+                    <input type="text" id="batchOutput" placeholder="Select output folder" readonly>
+                    <button onclick="selectFolder('output')">Browse</button>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="batchProvider">AI Provider:</label>
+                    <select id="batchProvider">
+                        <option value="grok">Grok</option>
+                        <option value="midjourney">Midjourney</option>
+                        <option value="comfyui">ComfyUI</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Batch Log:</label>
+                <div id="batchLog" class="log-output"></div>
+            </div>
+
+            <div class="button-group">
+                <button class="btn btn-primary" onclick="processBatch()">Process Batch</button>
+                <button class="btn btn-secondary" onclick="clearBatchLog()">Clear Log</button>
+            </div>
+        </div>
+
+        <!-- Settings Tab -->
+        <div id="settings" class="tab-content">
+            <div class="settings-section">
+                <h2>API Configuration</h2>
+                
+                <div class="form-group">
+                    <label for="grokKey">Grok API Key:</label>
+                    <input type="password" id="grokKey" placeholder="Enter your Grok API key">
+                    <button class="btn btn-secondary" onclick="saveGrokKey()">Save</button>
+                </div>
+
+                <div class="form-group">
+                    <label for="mjKey">Midjourney API Key:</label>
+                    <input type="password" id="mjKey" placeholder="Enter your Midjourney API key">
+                    <button class="btn btn-secondary" onclick="saveMJKey()">Save</button>
+                </div>
+
+                <div class="form-group">
+                    <label for="comfyuiServer">ComfyUI Server:</label>
+                    <input type="text" id="comfyuiServer" placeholder="http://localhost:8188" value="http://localhost:8188">
+                    <button class="btn btn-secondary" onclick="saveComfyUIServer()">Save</button>
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <h2>Video Processing Defaults</h2>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="defaultFPS">Default FPS:</label>
+                        <input type="number" id="defaultFPS" min="12" max="120" value="24">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="defaultCodec">Default Codec:</label>
+                        <select id="defaultCodec">
+                            <option value="libx264">H.264</option>
+                            <option value="libx265">H.265</option>
+                        </select>
+                    </div>
+                </div>
+
+                <button class="btn btn-primary" onclick="saveDefaults()">Save Defaults</button>
+            </div>
+        </div>
+
+        <!-- Status Tab -->
+        <div id="status" class="tab-content">
+            <div class="status-grid">
+                <div class="status-card">
+                    <h3>PowerShell</h3>
+                    <p id="statusPS" class="status-value">Checking...</p>
+                </div>
+                <div class="status-card">
+                    <h3>FFmpeg</h3>
+                    <p id="statusFFmpeg" class="status-value">Checking...</p>
+                </div>
+                <div class="status-card">
+                    <h3>Python</h3>
+                    <p id="statusPython" class="status-value">Checking...</p>
+                </div>
+                <div class="status-card">
+                    <h3>Grok API</h3>
+                    <p id="statusGrok" class="status-value">Not configured</p>
+                </div>
+                <div class="status-card">
+                    <h3>Midjourney API</h3>
+                    <p id="statusMJ" class="status-value">Not configured</p>
+                </div>
+                <div class="status-card">
+                    <h3>ComfyUI</h3>
+                    <p id="statusComfyUI" class="status-value">Not running</p>
+                </div>
+            </div>
+
+            <button class="btn btn-primary" onclick="checkStatus()">Refresh Status</button>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
