@@ -287,4 +287,3 @@ $mainContainer.TabPages.Add($tab3)
 
 $form.Controls.Add($mainContainer)
 $form.ShowDialog() | Out-Null
-    if ($apiKeyBox.Text) {
