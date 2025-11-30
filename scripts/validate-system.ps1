@@ -138,9 +138,6 @@ if ($null -ne (Get-Command ffmpeg -ErrorAction SilentlyContinue)) {
     }
     
     Test-Component "FFmpeg GPU Support" {
-        $gpuSupport = @("cuda", "dxva2", "qsv", "nvenc")
-        $available = @()
-        
         $ffmpegHelp = ffmpeg -h encoder=h264_nvenc 2>&1
         
         if ($ffmpegHelp -match "Unknown encoder") {
@@ -321,7 +318,7 @@ $apiKeys = @(
 
 foreach ($apiKey in $apiKeys) {
     Test-Component "$($apiKey.Provider) API Key" {
-        $key = $env:$($apiKey.Name)
+        $key = [System.Environment]::GetEnvironmentVariable($apiKey.Name)
         if ($key) {
             $masked = $key.Substring(0, [Math]::Min(10, $key.Length)) + "***"
             @{ Success = $true; Details = "Configured ($masked)" }

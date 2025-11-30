@@ -65,7 +65,7 @@ function Get-VideoFiles {
     return $videos
 }
 
-function Process-Video {
+function Invoke-VideoProcessing {
     param(
         [object]$VideoFile,
         [int]$Index,
@@ -104,7 +104,7 @@ function Process-Video {
     }
 }
 
-function Process-BatchWithRetry {
+function Invoke-BatchWithRetry {
     param([object]$VideoFile, [int]$Index, [int]$Total)
     
     $attempt = 0

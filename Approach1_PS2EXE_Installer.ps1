@@ -179,7 +179,7 @@ Write-Host "Application running..."
 "@ | Set-Content "$InstallPath\app.ps1"
         
         # Create uninstall script
-        Create-UninstallScript
+        New-UninstallScript
         
         Log-Message "✓ Application files installed" "SUCCESS"
         return $true
@@ -239,7 +239,7 @@ function Create-Shortcuts {
 # UNINSTALL SCRIPT CREATION
 # ============================================
 
-function Create-UninstallScript {
+function New-UninstallScript {
     $uninstallScript = @"
 #Requires -RunAsAdministrator
 Write-Host "Uninstalling $AppName..."

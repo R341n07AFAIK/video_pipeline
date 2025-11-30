@@ -14,7 +14,7 @@ param(
 
 function Write-Log { param($m) Write-Host "[$((Get-Date).ToString('s'))] $m" }
 
-function Ensure-Elevated {
+function Assert-Elevated {
     if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
         Write-Log "This operation requires elevation. Relaunching as administrator..."
         Start-Process -FilePath "powershell.exe" -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs
@@ -52,7 +52,7 @@ function Remove-InstallFolder {
 }
 
 try {
-    Ensure-Elevated
+    Assert-Elevated
     Remove-StartMenuShortcuts
     Remove-UninstallRegistry
     Remove-InstallFolder

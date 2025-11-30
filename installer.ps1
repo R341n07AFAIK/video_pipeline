@@ -13,11 +13,23 @@ Usage:
 Note: This script requires elevation to write to Program Files and the registry.
 #>
 
+# Define Write-Log function first (before any calls to it)
+function Write-Log {
+    param([string]$Msg)
+    $ts = (Get-Date).ToString('s')
+    Write-Host "[$ts] $Msg"
+}
+
 param(
-    [string]$InstallDir = "$env:ProgramFiles\\VideoPipeline",
+    [string]$InstallDir = "",
     [switch]$Force,
     [switch]$NoLaunch
 )
+
+# Set default if not provided
+if (-not $InstallDir) {
+    $InstallDir = Join-Path $env:ProgramFiles 'VideoPipeline'
+}
 
 # Load installer settings if present (installer_settings.json)
 $settingsPath = Join-Path (Split-Path -Parent $PSCommandPath) 'installer_settings.json'
@@ -38,19 +50,13 @@ if (Test-Path $settingsPath) {
     }
 }
 
-function Write-Log {
-    param([string]$Msg)
-    $ts = (Get-Date).ToString('s')
-    Write-Host "[$ts] $Msg"
-}
-
-function Ensure-Elevated {
+function Assert-Elevated {
     if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
         Write-Log "Not elevated. Relaunching with elevation..."
-        $args = "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`""
-        if ($Force) { $args += " -Force" }
-        if ($NoLaunch) { $args += " -NoLaunch" }
-        Start-Process -FilePath "powershell.exe" -ArgumentList $args -Verb RunAs
+        $elevArgs = "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`""
+        if ($Force) { $elevArgs += " -Force" }
+        if ($NoLaunch) { $elevArgs += " -NoLaunch" }
+        Start-Process -FilePath "powershell.exe" -ArgumentList $elevArgs -Verb RunAs
         exit 0
     }
 }
@@ -176,7 +182,7 @@ function Copy-FilesToInstallDir {
     Write-Log "Copy complete."
 }
 
-function Create-StartMenuShortcuts {
+function New-StartMenuShortcuts {
     param([string]$AppDir)
 
     Write-Log "Creating Start Menu shortcuts..."
@@ -235,7 +241,7 @@ function Write-InstallLog {
 }
 
 function Main {
-    Ensure-Elevated
+    Assert-Elevated
 
     $source = Split-Path -Parent $PSCommandPath
     Write-Log "Source folder: $source"
@@ -290,7 +296,7 @@ function Main {
     }
 
     Copy-FilesToInstallDir -SourceDir $source -TargetDir $InstallDir
-    Create-StartMenuShortcuts -AppDir $InstallDir
+    New-StartMenuShortcuts -AppDir $InstallDir
     Register-UninstallEntry -AppDir $InstallDir -DisplayVersion '1.0.0'
     Write-InstallLog -AppDir $InstallDir
 
@@ -309,4 +315,3 @@ catch {
     Write-Log "Installer failed: $_"
     exit 1
 }
-
